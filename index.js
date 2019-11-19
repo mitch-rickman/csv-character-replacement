@@ -1,16 +1,20 @@
 const path = require('path');
 const fs = require('fs');
 const csvParser = require('csv-parser');
+const characterDictionary = require('./dictionary'); 
 
 // file locations
 const inputFilePath = path.resolve(__dirname, 'input.csv');
 const outputFilePath = path.resolve(__dirname, 'output.csv');
 
+// columns to clean
+const columnsToClean = ['Guest name', 'Booker name'];
+
 
 
 // globals
 let currentReadRow = 1;
-const readDataStore = [];
+let readDataStore = [];
 
 function runProgram() {
     importCsv();
@@ -32,15 +36,33 @@ function onDataRead(row) {
 }
 
 function onFileReadEnd() {
+    readDataStore = readDataStore.map(updateBadCharacters)
     outputCsv();
     console.log('file read complete');
+}
+
+function updateBadCharacters(row, index) {
+    console.log('updating row', index);
+
+    for (let i = 0, n = columnsToClean.length; i < n; i++) {
+        let column = columnsToClean[i];
+        
+        Object.keys(characterDictionary).forEach((badCharacter) => {
+            if (row[column].indexOf(badCharacter) !== -1) {
+                console.log(`replacing bad character "${badCharacter}" in ${column}: ${row[column]}`); 
+                row[column] = row[column].replace(badCharacter, characterDictionary[badCharacter]);
+            }
+        });
+    }
+
+    return row;
 }
 
 
 // ouput files
 function outputCsv() {
-    console.log(Object.keys(readDataStore[0]));
-    console.log(Object.keys(readDataStore[1]));
+    // console.log(Object.keys(readDataStore[0]));
+    // console.log(Object.keys(readDataStore[1]));
     var headerValues = Object.keys(readDataStore[0])
     var headerRows = headerValues.map((key) => {
         return {
@@ -48,7 +70,8 @@ function outputCsv() {
             title: key
         }
     });
-    console.log(headerRows);
+    
+    // console.log(headerRows);
     const csvWriter = require('csv-writer').createObjectCsvWriter({
         path: outputFilePath,
         header: headerRows
